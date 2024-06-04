@@ -1,0 +1,31 @@
+{
+  "name": "fullstack_2024_harkat_osa4",
+  "version": "1.0.0",
+  "description": "[fullstackopen osa 4](https://fullstackopen.com/osa4)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "lint": "eslint .",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:ui": "rm -rf dist && cd ./frontend && npm run build && cp -r dist ..",
+    "deploy:full": "npm run build:ui && git add . && git commit -m uibuild && git push"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mongodb": "^6.7.0",
+    "mongoose": "^8.4.1",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.4.0",
+    "@stylistic/eslint-plugin-js": "^2.1.0",
+    "eslint": "^9.4.0",
+    "globals": "^15.3.0",
+    "nodemon": "^3.1.3"
+  }
+}
