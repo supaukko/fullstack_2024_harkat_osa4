@@ -81,3 +81,27 @@ const cors = require('cors')
 app.use(cors())
 
 ```
+
+## Testaus
+
+Asennetaan Jestin SuperTest kirjastoa
+
+```
+npm install --save-dev supertest
+```
+
+# Ympärsitömuuttuja / NODE_ENV
+
+Pitää asentaa `cross-env` jotta NODE_ENV voidaan määritellä Windows:ssa
+
+```
+npm install --save-dev cross-env
+```
+
+# awsync / await miten päästään eroon try - catch lohkoisa
+
+express-async-errors -kirjastoa käytettäessä ei tarvita
+erillisiä avulla try-catch lohkoja eikä next(exception) funktiokutsu. Kirjasto hoitaa asian konepellin alla, eli jos async-funktiona määritellyn routen sisällä syntyy poikkeus, siirtyy suoritus automaattisesti virheenkäsittelijämiddlewareen.
+
+`npm install express-async-errors`
+

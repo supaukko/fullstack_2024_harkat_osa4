@@ -7,11 +7,21 @@ const blogSchema = new mongoose.Schema({
   },
   title: {
     type: String,
-    required: true
+    required: true,
+    validate: {
+      validator: function(value) {
+        return value !== null || value.trim() !== ''
+      }, message: 'Invalid title'
+    }
   },
   url: {
     type: String,
-    required: true
+    required: true,
+    validate: {
+      validator: function(value) {
+        return value !== null || value.trim() !== ''
+      }, message: 'Invalid URL'
+    }
   },
   votes: {
     type: Number,

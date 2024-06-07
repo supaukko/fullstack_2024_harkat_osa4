@@ -89,7 +89,7 @@ const App = () => {
   return (
     <div>
       <Notification message={notificationMessage} style={notificationStyle} />
-      <h2>Blokilista</h2>
+      <h2>Blogilista</h2>
       <Filter filter={filter} handleChange={handleFilterChange} />
       <h3>Add a new</h3>
       <BlogForm
