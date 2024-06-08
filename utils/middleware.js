@@ -1,6 +1,7 @@
 const logger = require('./logger')
 const jwt = require('jsonwebtoken')
 const config = require('./config')
+const User = require('../models/user')
 
 const requestLogger = (request, response, next) => {
   logger.info('Method:', request.method)
@@ -35,35 +36,82 @@ const errorHandler = (error, request, response, next) => {
   next(error)
 }
 
-/**
- * Check token and set decoded user data
- * @param {*} request
- * @param {*} response
- * @param {*} next
- * @returns
- */
-const jwtToken = async (request, response, next) => {
+const parseToken = (request) => {
+  const result = {
+    token: null,
+    status: null,
+    message: null
+  }
   const authorization = request.get('authorization')
   const token = authorization && authorization.split(' ')[1]
 
   if (!token) {
-    logger.info('** jwtToken 401')
-    return response.status(401).json({ message: 'Access denied' })
+    result.status = 401
+    result.message = 'Access denied'
+    return result
   }
 
   try {
-    const decodedToken = jwt.verify(token, config.SECRET)
-    request.token = decodedToken
-    next()
+    result.token = jwt.verify(token, config.SECRET)
   } catch (error) {
-    logger.info('** jwtToken 400', error.message)
-    response.status(403).json({ message: `Invalid token ${error.message}` })
+    result.status = 403
+    result.message = `Invalid token ${error.message}`
   }
+  return result
+}
+
+const tokenExtractor = async (request, response, next) => {
+  const result = parseToken(request)
+  if (result.message) {
+    return response.status(result.status).json({ message: result.message })
+  }
+  request.token = result.token
+  next()
+}
+
+const userExtractor = async (request, response, next) => {
+  const result = parseToken(request)
+  if (result.message) {
+    return response.status(result.status).json({ message: result.message })
+  }
+  const user =  await User.findById(result.token.id)
+  request.user = user
+  next()
+}
+
+/**
+ * Väliaikaiseen testikäyttöön tarkoitettu middleware, joka
+ * lisää tokenin headeriin
+ * @param {*} request
+ * @param {*} response
+ * @param {*} next
+ */
+const dummyAuthorizationInsertion = async (request, response, next) => {
+
+  const authorization = request.headers['authorization']
+  if (authorization === undefined || !authorization.startsWith('Bearer ')) {
+    const users = await User.find({})
+    if (users !== null && users.length) {
+      const user = users[0]
+      const token = jwt.sign(
+        {
+          username: user.username,
+          id: user._id,
+        },
+        config.SECRET,
+        { expiresIn: Number(config.TOKEN_EXPIRES_IN) }
+      )
+      request.headers['authorization'] = `Bearer ${token}`
+    }
+  }
+  next()
 }
 
 module.exports = {
   requestLogger,
   unknownEndpoint,
   errorHandler,
-  jwtToken
+  tokenExtractor,
+  userExtractor,
+  dummyAuthorizationInsertion
 }

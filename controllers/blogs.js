@@ -2,9 +2,7 @@ const router = require('express').Router()
 const mongoose = require('mongoose')
 const Blog = require('../models/blog')
 const User = require('../models/user')
-const jwt = require('jsonwebtoken')
-const config = require('../utils/config')
-const { jwtToken } = require('../utils/middleware')
+const { tokenExtractor } = require('../utils/middleware')
 
 /*
 const getTokenFrom = request => {
@@ -37,7 +35,7 @@ router.get('/:id', async (request, response /*,next*/) => {
   //} catch(error) { next(error) }
 })
 
-router.post('/', jwtToken, async (request, response /*,next*/) => {
+router.post('/', tokenExtractor, async (request, response /*,next*/) => {
 
   if (request.token === null || request.token.id === null) {
     return response.status(401).json({ error: 'token invalid' })

@@ -81,7 +81,8 @@ const App = () => {
         setBlogData({...defaultBlogData});
       })
       .catch(error => {
-        showNotification(error.response.data.error, style.error)
+        const msg = error.response.data.error;
+        showNotification(msg ? msg : error.message, style.error)
       })
       return
     }
@@ -94,7 +95,8 @@ const App = () => {
         setBlogData({...defaultBlogData});
       })
       .catch(error => {
-        showNotification(error.response.data.error, style.error)
+        const msg = error.response.data.error;
+        showNotification(msg ? msg : error.message, style.error)
       })
   }
 
