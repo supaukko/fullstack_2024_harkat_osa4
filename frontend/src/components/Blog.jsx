@@ -1,6 +1,9 @@
-const Blog = ({blog, handleDelete}) => {
+const Blog = ({blog, handleDelete, blogData, handleRowSelect}) => {
   return (
-    <tr>
+    <tr
+      onClick={() => handleRowSelect(blog)}
+      className={blogData && blogData.id === blog.id ? 'selected' : ''}
+    >
       <td>{blog.author}</td>
       <td>{blog.title}</td>
       <td>{blog.url}</td>

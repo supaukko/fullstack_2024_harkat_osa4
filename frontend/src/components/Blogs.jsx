@@ -1,8 +1,8 @@
 import Blog from './Blog'
 
-const Blogs = ({blogs, handleDelete}) => {
+const Blogs = ({blogs, handleDelete, blogData, handleRowSelect}) => {
   return (
-    <table border="1" style={{ width: '100%', borderCollapse: 'collapse' }}>
+    <table>
       <thead>
         <tr>
           <th>Kirjoittaja</th>
@@ -17,7 +17,9 @@ const Blogs = ({blogs, handleDelete}) => {
         blogs.map(blog => <Blog
             key={blog.id}
             blog={blog}
-            handleDelete={handleDelete} />)
+            handleDelete={handleDelete}
+            blogData={blogData}
+            handleRowSelect={handleRowSelect} />)
       }
       </tbody>
     </table>
