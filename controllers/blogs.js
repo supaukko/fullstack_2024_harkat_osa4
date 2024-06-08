@@ -45,19 +45,12 @@ router.delete('/:id', async (request, response /*,next*/) => {
 })
 
 router.put('/:id', async (request, response /*,next*/) => {
-  const body = request.body
-
-  const blog = new Blog({
-    author: body.author,
-    title: body.title,
-    url: body.url,
-    votes: Number(body.votes || '0')
-  })
-
   //try {
-  const updatedBlog = await Blog.findByIdAndUpdate(
-    request.params.id, blog, { new: true })
-  response.json(updatedBlog)
+  const blog = await Blog.findByIdAndUpdate(request.params.id, request.body, { new: true })
+  if (!blog) {
+    return response.status(404).json({ message: 'Blog not found' })
+  }
+  response.status(200).json(blog)
   //} catch(error) { next(error) }
 })
 
