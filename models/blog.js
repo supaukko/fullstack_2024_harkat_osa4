@@ -1,5 +1,11 @@
 const mongoose = require('mongoose')
 
+/**
+ * Blogin skeema, riippuvuus useriin
+ * Mongoosen populate-funktion toiminnallisuus perustuu siihen, että
+ * on viitteiden "tyypit" on määritelty olioiden Mongoose-skeemaan
+ * ref-kentän avulla
+ */
 const blogSchema = new mongoose.Schema({
   author: {
     type: String,
@@ -26,6 +32,10 @@ const blogSchema = new mongoose.Schema({
   votes: {
     type: Number,
     default: 0
+  },
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   }
 })
 

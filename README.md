@@ -105,3 +105,19 @@ erillisiä avulla try-catch lohkoja eikä next(exception) funktiokutsu. Kirjasto
 
 `npm install express-async-errors`
 
+
+# Kirjautuminen
+
+JSON web token generoidaan jsonwebtoken-kirjaston avulla.
+.env tiedostoon talletetaan testailua varten:
+`SECRET=1dfae605-829f-47d8-bfca-536aa7e7eec1`
+
+
+Kryptauksessa käytetään bcryptjs kirjastoa (bcrypt kirjasston kanssa
+voi olla ongelmia Windowsin kanssa)
+
+```
+
+npm install  bcryptjs
+npm install jsonwebtoken
+```

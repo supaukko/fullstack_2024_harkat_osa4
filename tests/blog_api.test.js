@@ -3,28 +3,61 @@ const assert = require('node:assert')
 //const mongoose = require('mongoose')
 const supertest = require('supertest')
 const Blog = require('../models/blog')
+const User = require('../models/user')
 const helper = require('./test_helper')
 const { app } = require('../app')
 const db = require('../utils/db')
+const bcryptjs = require('bcryptjs')
 const api = supertest(app)
+
+const testUser = {
+  username: 'root',
+  name: 'Root',
+  password: 'passwd',
+  id: null,
+  passwordHash: null,
+  token: null
+}
 
 before(async () => {
   await db.doAsyncConnect()
 })
 
 beforeEach(async () => {
-  // Clear database
-  await Blog.deleteMany({})
+  // Clear and initialize users
+  await User.deleteMany({})
 
-  // Save test data to the database
-  // await Blog.insertMany(helper.initialBlogs)
-  const blogs = helper.initialBlogs.map(blog => {
-    return new Blog(blog)
-  })
-  const promises = blogs.map(blog => {
-    blog.save()
-  })
-  await Promise.all(promises)
+  // Create password hash
+  testUser.passwordHash = await bcryptjs.hash(testUser.password, 10)
+
+  // Create user
+  const user = new User({
+    username: testUser.username,
+    name: testUser.name,
+    passwordHash: testUser.passwordHash })
+  const savedUser = await user.save()
+
+  // Login and get token
+  const loginResponse = await api.post('/api/login')
+    .send({
+      username: testUser.username,
+      password: testUser.password })
+    .expect(200)
+    .expect('Content-Type', /application\/json/)
+  testUser.token = loginResponse.body.token
+
+  // Clear and initialize blogs
+  await Blog.deleteMany({})
+  for (const blog of helper.initialBlogs) {
+    const obj = new Blog(
+      {
+        ...blog,
+        user: savedUser._id
+      })
+    const savedObj = await obj.save()
+    savedUser.blogs = savedUser.blogs.concat(savedObj._id)
+  }
+  await savedUser.save()
 })
 
 after(async () => {
@@ -34,7 +67,7 @@ after(async () => {
 
 describe('Tehtavat 4.8 - 4.12', () => {
   describe('GET /api/blogs', () => {
-    test('Should correct number of objects', async () => {
+    test('Should get correct number of objects', async () => {
     // Act
       const response = await api.get('/api/blogs')
 
@@ -66,6 +99,7 @@ describe('Tehtavat 4.8 - 4.12', () => {
       await api
         .post('/api/blogs')
         .send(newBlog)
+        .set('Authorization', `Bearer ${testUser.token}`)
         .expect(201)
         .expect('Content-Type', /application\/json/)
 
@@ -88,6 +122,7 @@ describe('Tehtavat 4.8 - 4.12', () => {
       // Act
       await api
         .post('/api/blogs')
+        .set('Authorization', `Bearer ${testUser.token}`)
         .send(newBlog)
         .expect(201)
         .expect('Content-Type', /application\/json/)
@@ -108,6 +143,7 @@ describe('Tehtavat 4.8 - 4.12', () => {
       // Act & assert
       await api
         .post('/api/blogs')
+        .set('Authorization', `Bearer ${testUser.token}`)
         .send(newBlog)
         .expect(400)
         .expect('Content-Type', /application\/json/)
@@ -137,7 +173,7 @@ describe('Tehtavat 4.13 - 4.14', () => {
       // Arrange
       const response = await api.get('/api/blogs')
       const blog = { ...response.body[0] }
-      blog.title = blog.title.concat('changed')
+      blog.title = blog.title.concat('_changed')
 
       // Act
       const changedResponse = await api
@@ -146,7 +182,37 @@ describe('Tehtavat 4.13 - 4.14', () => {
         .expect(200)
 
       // Assert
-      assert.deepStrictEqual(changedResponse.body, blog)
+      // assert.deepStrictEqual(changedResponse.body, blog)
+      assert.strictEqual(changedResponse.body.title, blog.title)
+      assert.strictEqual(changedResponse.body.author, blog.author)
+      assert.strictEqual(changedResponse.body.url, blog.url)
+      assert.strictEqual(changedResponse.body.id, blog.id)
+      assert.strictEqual(changedResponse.body.user, blog.user.id)
     })
+  })
+})
+
+describe('User handling', () => {
+  test('Shoud add fresh username', async () => {
+    // Arrange
+    const usersAtStart = await helper.usersInDb()
+    const newUser = {
+      username: 'joedoe',
+      name: 'Joe Doe',
+      password: 'passwd',
+    }
+
+    // Act
+    await api
+      .post('/api/users')
+      .send(newUser)
+      .expect(201)
+      .expect('Content-Type', /application\/json/)
+
+    // Assert
+    const usersAtEnd = await helper.usersInDb()
+    assert.strictEqual(usersAtEnd.length, usersAtStart.length + 1)
+    const usernames = usersAtEnd.map(u => u.username)
+    assert(usernames.includes(newUser.username))
   })
 })
