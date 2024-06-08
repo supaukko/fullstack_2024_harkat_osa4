@@ -33,72 +33,120 @@ after(async () => {
 })
 
 describe('Tehtavat 4.8 - 4.12', () => {
+  describe('GET /api/blogs', () => {
+    test('Should correct number of objects', async () => {
+    // Act
+      const response = await api.get('/api/blogs')
 
-  test('Should return the correct number of objects', async () => {
-    const response = await api.get('/api/blogs')
-    assert.strictEqual(response.body.length, helper.initialBlogs.length)
-  })
+      // Assert
+      assert.strictEqual(response.body.length, helper.initialBlogs.length)
+    })
 
-  test('Should have a blog identifier field named `id`', async () => {
-    const response = await api.get('/api/blogs')
-    response.body.forEach(blog => {
-      assert.strictEqual(
-        Object.prototype.hasOwnProperty.call(blog, 'id'),
-        true, `Document ${JSON.stringify(blog)} does not have an 'id' property`)
+    test('Should have `id` identifier field', async () => {
+      const response = await api.get('/api/blogs')
+      response.body.forEach(blog => {
+        assert.strictEqual(
+          Object.prototype.hasOwnProperty.call(blog, 'id'),
+          true, `Document ${JSON.stringify(blog)} does not have an 'id' property`)
+      })
     })
   })
 
-  test('Should be possible to add a blog', async () => {
-    const newBlog = {
-      title: 'Test title',
-      author: 'Test author',
-      url: 'https://foo.bar.com/',
-      votes: 1
-    }
+  describe('POST /api/blogs', () => {
+    test('Should add blog', async () => {
+    // Arrange
+      const newBlog = {
+        title: 'Test title',
+        author: 'Test author',
+        url: 'https://foo.bar.com/',
+        votes: 1
+      }
 
-    await api
-      .post('/api/blogs')
-      .send(newBlog)
-      .expect(201)
-      .expect('Content-Type', /application\/json/)
+      // Act
+      await api
+        .post('/api/blogs')
+        .send(newBlog)
+        .expect(201)
+        .expect('Content-Type', /application\/json/)
 
-    const response = await api.get('/api/blogs')
-    const authors = response.body.map(r => r.author)
+      // Assert
+      const response = await api.get('/api/blogs')
+      const authors = response.body.map(r => r.author)
+      assert.strictEqual(response.body.length, helper.initialBlogs.length + 1)
+      assert(authors.includes(newBlog.author))
+    })
 
-    assert.strictEqual(response.body.length, helper.initialBlogs.length + 1)
-    assert(authors.includes(newBlog.author))
+    test('Shoud have default value `0` for the `likes`', async () => {
+    // Arrange
+      const newBlog = {
+        title: 'Test title',
+        author: 'Test author',
+        url: 'https://foo.bar.com/',
+        votes: null
+      }
+
+      // Act
+      await api
+        .post('/api/blogs')
+        .send(newBlog)
+        .expect(201)
+        .expect('Content-Type', /application\/json/)
+
+      // Assert
+      const response = await api.get('/api/blogs')
+      assert.strictEqual(response.body.length, helper.initialBlogs.length + 1)
+      assert(response.body.every(blog => blog['votes'] !== null))
+    })
+
+    test('Should return status 400 if no `author` or `URL`', async () => {
+    // Arrange
+      const newBlog = {
+        author: 'Test author',
+        votes: 15
+      }
+
+      // Act & assert
+      await api
+        .post('/api/blogs')
+        .send(newBlog)
+        .expect(400)
+        .expect('Content-Type', /application\/json/)
+    })
+  })
+})
+
+describe('Tehtavat 4.13 - 4.14', () => {
+  describe('DELETE /api/blogs/:id', () => {
+    test('Should delete a blog', async () => {
+      // Arrange
+      let response = await api.get('/api/blogs')
+      const blog = { ...response.body[0] }
+
+      // Act & assert
+      await api
+        .delete(`/api/blogs/${blog.id}`)
+        .expect(204)
+
+      response = await api.get('/api/blogs')
+      assert.strictEqual(response.body.length, helper.initialBlogs.length - 1)
+    })
   })
 
-  test('Default value in the likes field should be 0', async () => {
-    const newBlog = {
-      title: 'Test title',
-      author: 'Test author',
-      url: 'https://foo.bar.com/',
-      votes: null
-    }
+  describe('PUT /api/blogs/:id', () => {
+    test('Should change blog', async () => {
+      // Arrange
+      const response = await api.get('/api/blogs')
+      const blog = { ...response.body[0] }
+      blog.title = blog.title.concat('changed')
 
-    await api
-      .post('/api/blogs')
-      .send(newBlog)
-      .expect(201)
-      .expect('Content-Type', /application\/json/)
+      // Act
+      const changedResponse = await api
+        .put(`/api/blogs/${blog.id}`)
+        .send(blog)
+        .expect(200)
 
-    const response = await api.get('/api/blogs')
-    assert.strictEqual(response.body.length, helper.initialBlogs.length + 1)
-    assert(response.body.every(blog => blog['votes'] !== null))
+      // Assert
+      assert.deepStrictEqual(changedResponse.body, blog)
+    })
   })
-
-  test('Should be status 400 if the blog has no author or URL', async () => {
-    const newBlog = {
-      author: 'Test author',
-      votes: 15
-    }
-
-    await api
-      .post('/api/blogs')
-      .send(newBlog)
-      .expect(400)
-      .expect('Content-Type', /application\/json/)
-  })
-
 })
