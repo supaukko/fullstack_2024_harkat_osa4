@@ -74,7 +74,7 @@ const App = () => {
     if (blogData.id !== null || blogData.id?.trim() === '') {
       console.log('handleSubmitBlog - update', blogData)
       blogService.update(blogData.id, blogData)
-      blogService.create(blogData)
+      //blogService.create(blogData)
       .then(returnedBlog => {
         setBlogs(blogs.map(blog => (blog.id === blogData.id ? {...blogData} : blog)))
         showNotification(`Updated ${returnedBlog.author}`, style.notification)
