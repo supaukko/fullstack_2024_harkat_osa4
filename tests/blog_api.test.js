@@ -1,22 +1,34 @@
 const { test, describe, before, after, beforeEach } = require('node:test')
 const assert = require('node:assert')
-//const mongoose = require('mongoose')
 const supertest = require('supertest')
 const Blog = require('../models/blog')
 const User = require('../models/user')
 const helper = require('./test_helper')
 const { app } = require('../app')
 const db = require('../utils/db')
-const bcryptjs = require('bcryptjs')
 const api = supertest(app)
 
 const testUser = {
   username: 'root',
   name: 'Root',
   password: 'passwd',
-  id: null,
-  passwordHash: null,
   token: null
+}
+
+/**
+ * Login and return token
+ * @param {*} username
+ * @param {*} password
+ * @returns token
+ */
+const doLogin = async (username, password) => {
+  const loginResponse = await api.post('/api/login')
+    .send({
+      username: username,
+      password: password })
+    .expect(200)
+    .expect('Content-Type', /application\/json/)
+  return loginResponse.body.token
 }
 
 before(async () => {
@@ -24,40 +36,13 @@ before(async () => {
 })
 
 beforeEach(async () => {
-  // Clear and initialize users
+  // Clear db
   await User.deleteMany({})
-
-  // Create password hash
-  testUser.passwordHash = await bcryptjs.hash(testUser.password, 10)
-
-  // Create user
-  const user = new User({
-    username: testUser.username,
-    name: testUser.name,
-    passwordHash: testUser.passwordHash })
-  const savedUser = await user.save()
-
-  // Login and get token
-  const loginResponse = await api.post('/api/login')
-    .send({
-      username: testUser.username,
-      password: testUser.password })
-    .expect(200)
-    .expect('Content-Type', /application\/json/)
-  testUser.token = loginResponse.body.token
-
-  // Clear and initialize blogs
   await Blog.deleteMany({})
-  for (const blog of helper.initialBlogs) {
-    const obj = new Blog(
-      {
-        ...blog,
-        user: savedUser._id
-      })
-    const savedObj = await obj.save()
-    savedUser.blogs = savedUser.blogs.concat(savedObj._id)
-  }
-  await savedUser.save()
+  // Add user and related blogs
+  await helper.addUserAndBlocks(testUser, helper.initialBlogs)
+  // Login and get token
+  testUser.token = await doLogin(testUser.username, testUser.password)
 })
 
 after(async () => {
@@ -161,13 +146,13 @@ describe('Tehtavat 4.13 - 4.14', () => {
       // Act & assert
       await api
         .delete(`/api/blogs/${blog.id}`)
+        .set('Authorization', `Bearer ${testUser.token}`)
         .expect(204)
 
       response = await api.get('/api/blogs')
       assert.strictEqual(response.body.length, helper.initialBlogs.length - 1)
     })
   })
-
   describe('PUT /api/blogs/:id', () => {
     test('Should change blog', async () => {
       // Arrange
@@ -214,5 +199,90 @@ describe('User handling', () => {
     assert.strictEqual(usersAtEnd.length, usersAtStart.length + 1)
     const usernames = usersAtEnd.map(u => u.username)
     assert(usernames.includes(newUser.username))
+  })
+})
+
+/**
+ * Osa 4 - Token-perustainen kirjautuminen
+ */
+describe('Tehtavat 4.15 - 4.23', () => {
+  describe('User tests', () => {
+    test('Shoud fail when passwd too short', async () => {
+      // Arrange
+      const usersAtStart = await helper.usersInDb()
+      const newUser = {
+        username: 'joedoe',
+        name: 'Joe Doe',
+        password: 'pa',
+      }
+
+      // Act
+      await api
+        .post('/api/users')
+        .send(newUser)
+        .expect(400)
+        .expect('Content-Type', /application\/json/)
+
+      // Assert
+      const usersAtEnd = await helper.usersInDb()
+      assert.strictEqual(usersAtEnd.length, usersAtStart.length)
+    })
+    test('Shoud fail when username is already in use', async () => {
+      // Arrange
+      const usersAtStart = await helper.usersInDb()
+      const newUser = {
+        username: 'joedoe',
+        name: 'Joe Doe',
+        password: 'pass',
+      }
+      await api
+        .post('/api/users')
+        .send(newUser)
+        .expect(201)
+        .expect('Content-Type', /application\/json/)
+
+      // Act
+      await api
+        .post('/api/users')
+        .send(newUser)
+        .expect(400)
+        .expect('Content-Type', /application\/json/)
+
+      // Assert
+      const usersAtEnd = await helper.usersInDb()
+      assert.strictEqual(usersAtEnd.length, usersAtStart.length + 1)
+    })
+  })
+
+  describe('Blog tests', () => {
+    describe('DELETE /api/blogs/:id', () => {
+      test('should fail delete a blog owned by someone else', async () => {
+        // Arrange
+        // Add a user how has no blogs
+        const userData = {
+          username: 'joedoe',
+          name: 'Joe Doe',
+          password: 'pass'
+        }
+        await api
+          .post('/api/users')
+          .send(userData)
+          .expect(201)
+          .expect('Content-Type', /application\/json/)
+        const token = await doLogin(userData.username, userData.password)
+
+        let response = await api.get('/api/blogs')
+        const blog = { ...response.body[0] }
+
+        // Act & assert
+        await api
+          .delete(`/api/blogs/${blog.id}`)
+          .set('Authorization', `Bearer ${token}`)
+          .expect(403)
+
+        response = await api.get('/api/blogs')
+        assert.strictEqual(response.body.length, helper.initialBlogs.length)
+      })
+    })
   })
 })

@@ -2,7 +2,7 @@ const router = require('express').Router()
 const mongoose = require('mongoose')
 const Blog = require('../models/blog')
 const User = require('../models/user')
-const { tokenExtractor } = require('../utils/middleware')
+const { tokenExtractor, userExtractor } = require('../utils/middleware')
 
 /*
 const getTokenFrom = request => {
@@ -35,43 +35,66 @@ router.get('/:id', async (request, response /*,next*/) => {
   //} catch(error) { next(error) }
 })
 
-router.post('/', tokenExtractor, async (request, response /*,next*/) => {
+router.post(
+  '/',
+  tokenExtractor,
+  userExtractor,
+  async (request, response /*,next*/) => {
 
-  if (request.token === null || request.token.id === null) {
-    return response.status(401).json({ error: 'token invalid' })
-  }
-  const user = await User.findById(request.token.id)
+    if (request.token === null || request.token.id === null) {
+      return response.status(401).json({ error: 'token invalid' })
+    }
+    const user = await User.findById(request.token.id)
 
-  //const user = await User.findById(body.userId)
-  const body = request.body
-  const blog = new Blog({
-    author: body.author,
-    title: body.title,
-    url: body.url,
-    votes: Number(body.votes || '0'),
-    user: user?._id
+    //const user = await User.findById(body.userId)
+    const body = request.body
+    const blog = new Blog({
+      author: body.author,
+      title: body.title,
+      url: body.url,
+      votes: Number(body.votes || '0'),
+      user: user?._id
+    })
+
+    //try {
+    const savedBlog = await blog.save()
+
+    // Lisätään käyttäjälle referenssi lisättyyn blogiin
+    if (user) {
+      user.blogs = user.blogs.concat(savedBlog._id)
+      await user.save()
+    }
+    console.log(`router.post - new blog id=${savedBlog._id}, user's block count=${user?.blogs?.length} kpl`)
+
+    response.status(201).json(savedBlog)
+  //} catch(error) { next(error) }
   })
 
+router.delete('/:id',
+  tokenExtractor,
+  userExtractor,
+  async (request, response /*,next*/) => {
   //try {
-  const savedBlog = await blog.save()
+    const blogId = request.params.id
+    const userId = request.user._id
+    if (!mongoose.Types.ObjectId.isValid(blogId)) {
+      return response.status(400).json({ message: 'Invalid blog ID' })
+    }
 
-  // Lisätään käyttäjälle referenssi lisättyyn blogiin
-  if (user) {
-    user.blogs = user.blogs.concat(savedBlog._id)
-    await user.save()
-  }
-  console.log(`router.post - new blog id=${savedBlog._id}, user's block count=${user?.blogs?.length} kpl`)
+    const blog = await Blog.findById(blogId)
+    if (!blog) {
+      return response.status(404).json({ message: 'Blog not found' })
+    }
 
-  response.status(201).json(savedBlog)
+    if (blog.user.toString() !== userId.toString()) {
+      return response.status(403).json(
+        { message: 'No authorization to delete the blog' })
+    }
+
+    await blog.deleteOne()
+    response.status(204).end()
   //} catch(error) { next(error) }
-})
-
-router.delete('/:id', async (request, response /*,next*/) => {
-  //try {
-  await Blog.findByIdAndDelete(request.params.id)
-  response.status(204).end()
-  //} catch(error) { next(error) }
-})
+  })
 
 router.put('/:id', async (request, response /*,next*/) => {
   //try {

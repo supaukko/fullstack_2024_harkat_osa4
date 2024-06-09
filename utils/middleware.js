@@ -89,7 +89,8 @@ const userExtractor = async (request, response, next) => {
 const dummyAuthorizationInsertion = async (request, response, next) => {
 
   const authorization = request.headers['authorization']
-  if (authorization === undefined || !authorization.startsWith('Bearer ')) {
+  if (config.ENV !== 'test' && (authorization === undefined ||
+    !authorization.startsWith('Bearer '))) {
     const users = await User.find({})
     if (users !== null && users.length) {
       const user = users[0]
