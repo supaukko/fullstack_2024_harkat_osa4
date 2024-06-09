@@ -44,8 +44,10 @@ router.post(
     if (request.token === null || request.token.id === null) {
       return response.status(401).json({ error: 'token invalid' })
     }
-    const user = await User.findById(request.token.id)
-
+    const user = request.user
+    if (!mongoose.Types.ObjectId.isValid(user._id)) {
+      return response.status(400).json({ message: 'Invalid user ID' })
+    }
     //const user = await User.findById(body.userId)
     const body = request.body
     const blog = new Blog({
@@ -53,7 +55,7 @@ router.post(
       title: body.title,
       url: body.url,
       votes: Number(body.votes || '0'),
-      user: user?._id
+      user: user._id
     })
 
     //try {

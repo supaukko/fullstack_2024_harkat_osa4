@@ -256,6 +256,34 @@ describe('Tehtavat 4.15 - 4.23', () => {
 
   describe('Blog tests', () => {
     describe('DELETE /api/blogs/:id', () => {
+      describe('DELETE /api/blogs/:id', () => {
+        test('should fail when unauthorized, no token', async () => {
+        // Arrange
+        // Add a user how has no blogs
+          const userData = {
+            username: 'joedoe',
+            name: 'Joe Doe',
+            password: 'pass'
+          }
+          await api
+            .post('/api/users')
+            .send(userData)
+            .expect(201)
+            .expect('Content-Type', /application\/json/)
+
+          let response = await api.get('/api/blogs')
+          const blog = { ...response.body[0] }
+
+          // Act & assert
+          await api
+            .delete(`/api/blogs/${blog.id}`)
+            .expect(401)
+
+          response = await api.get('/api/blogs')
+          assert.strictEqual(response.body.length, helper.initialBlogs.length)
+        })
+      })
+
       test('should fail delete a blog owned by someone else', async () => {
         // Arrange
         // Add a user how has no blogs
